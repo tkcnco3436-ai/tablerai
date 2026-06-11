@@ -4,6 +4,7 @@ import React, {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -299,7 +300,8 @@ function Model({
   onReady: (meshes: THREE.Mesh[]) => void;
 }) {
   const { scene } = useGLTF(url);
-  useEffect(() => {
+  // Center가 측정하기 전에 끝나야 해서 layout effect 사용
+  useLayoutEffect(() => {
     scene.updateWorldMatrix(true, true);
     const worldBox = new THREE.Box3().setFromObject(scene);
     const { dirVecs, uvDirs } = detectOrientation(scene, worldBox);
@@ -310,6 +312,12 @@ function Model({
       splitMeshByDirection(mesh, worldBox, dirVecs, uvDirs);
       meshes.push(mesh);
     });
+    // 크기 정규화: 최장축 2유닛 — 고정 카메라 거리에 맞춤
+    // (모델 원본이 cm 단위라 87유닛 → 카메라가 모델 안에 파묻혀 빈 화면)
+    const size = new THREE.Vector3();
+    worldBox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) scene.scale.multiplyScalar(2 / maxDim);
     onReady(meshes);
   }, [scene, onReady]);
   return <primitive object={scene} />;
