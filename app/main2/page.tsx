@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
+import { useLang } from "@/lib/i18n";
 
 /* ───────────────────────── augmented-ui 스타일 코너 클립 패널 ───────────────────────── */
 
@@ -185,11 +186,7 @@ const STATUS_ITEMS = [
   { k: "DECAL", v: "DRAG·BAKE" },
 ];
 
-const METRICS = [
-  { label: "제작 가능 수량", value: "100+", sub: "소량 제작 지원" },
-  { label: "시안 확인", value: "실시간", sub: "3D 360° 미리보기" },
-  { label: "제안서 출력", value: "PDF", sub: "목업 포함 자동 생성" },
-];
+// METRICS는 컴포넌트 내부에서 t()로 생성
 
 const fadeUp = {
   hidden: { opacity: 0, y: 18 },
@@ -201,7 +198,26 @@ const fadeUp = {
 };
 
 export default function Main2() {
+  const { t } = useLang();
   const [clock, setClock] = useState("--:--:--");
+
+  const METRICS = [
+    {
+      label: t("제작 가능 수량", "Production capacity"),
+      value: "100+",
+      sub: t("소량 제작 지원", "Small batches supported"),
+    },
+    {
+      label: t("시안 확인", "Design proofs"),
+      value: t("실시간", "Live"),
+      sub: t("3D 360° 미리보기", "3D 360° preview"),
+    },
+    {
+      label: t("제안서 출력", "Proposal export"),
+      value: "PDF",
+      sub: t("목업 포함 자동 생성", "Auto-generated with mockup"),
+    },
+  ];
   useEffect(() => {
     const t = setInterval(
       () => setClock(new Date().toLocaleTimeString("ko-KR", { hour12: false })),
@@ -279,8 +295,10 @@ export default function Main2() {
                 USER INPUT
               </div>
               <p className="mt-2 text-[13px] leading-relaxed text-[#d8ffe9]/80">
-                컬러를 고르고, 로고를 끌어다 놓고, 360°로 돌려서 확인하세요.
-                완성된 시안은 그대로 제안서가 됩니다.
+                {t(
+                  "컬러를 고르고, 로고를 끌어다 놓고, 360°로 돌려서 확인하세요. 완성된 시안은 그대로 제안서가 됩니다.",
+                  "Pick a color, drag your logo into place, and spin it 360°. The finished proof becomes your proposal."
+                )}
               </p>
             </AugPanel>
           </motion.div>
@@ -307,7 +325,10 @@ export default function Main2() {
             </div>
             <div className="mx-auto mt-8 max-w-sm font-mono text-sm text-[#d8ffe9]/80">
               <TypeLine
-                text="텀블러 3D 목업 시스템 가동 중 — 시안을 실시간으로 확인하세요."
+                text={t(
+                  "텀블러 3D 목업 시스템 가동 중 — 시안을 실시간으로 확인하세요.",
+                  "3D mockup system online — review your design proofs in real time."
+                )}
                 delay={600}
               />
             </div>
@@ -333,8 +354,10 @@ export default function Main2() {
                 RIG OUTPUT
               </div>
               <p className="mt-2 text-[13px] leading-relaxed text-[#d8ffe9]/80">
-                테이블형 · 고정형 · 확장형 3종 모델 로드 완료. 에디터에서 부위별
-                컬러와 데칼 위치를 직접 편집할 수 있습니다.
+                {t(
+                  "테이블형 · 고정형 · 확장형 3종 모델 로드 완료. 에디터에서 부위별 컬러와 데칼 위치를 직접 편집할 수 있습니다.",
+                  "Table, fixed, and extension models loaded. Edit per-face colors and decal placement directly in the editor."
+                )}
               </p>
             </AugPanel>
           </motion.div>
@@ -377,7 +400,7 @@ export default function Main2() {
                 "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)",
             }}
           >
-            ▶ 3D 에디터 진입
+            ▶ {t("3D 에디터 진입", "Enter 3D Editor")}
           </Link>
           <Link
             href="/"
@@ -387,7 +410,7 @@ export default function Main2() {
                 "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)",
             }}
           >
-            기존 메인으로
+            {t("기존 메인으로", "Back to main")}
           </Link>
         </motion.div>
       </div>

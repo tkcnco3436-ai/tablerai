@@ -11,7 +11,8 @@ import React, {
 import { Canvas, useThree } from "@react-three/fiber";
 import { Center, Environment, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { SPECS, CONTACT_EMAIL } from "@/lib/specs";
+import { getSpecs, CONTACT_EMAIL } from "@/lib/specs";
+import { useLang } from "@/lib/i18n";
 
 const SWATCHES = [
   "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899",
@@ -22,20 +23,21 @@ const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
 // 방향 인덱스: 분할 시 머티리얼 배열 순서와 동일
 const DIRS = [
-  { key: "front", label: "앞면" },
-  { key: "back", label: "뒷면" },
-  { key: "right", label: "오른쪽면" },
-  { key: "left", label: "왼쪽면" },
-  { key: "top", label: "윗면" },
-  { key: "bottom", label: "아랫면" },
+  { key: "front", label: "앞면", labelEn: "Front" },
+  { key: "back", label: "뒷면", labelEn: "Back" },
+  { key: "right", label: "오른쪽면", labelEn: "Right" },
+  { key: "left", label: "왼쪽면", labelEn: "Left" },
+  { key: "top", label: "윗면", labelEn: "Top" },
+  { key: "bottom", label: "아랫면", labelEn: "Bottom" },
 ] as const;
 type DirKey = (typeof DIRS)[number]["key"];
 const DIR_INDEX: Record<string, number> = {
   front: 0, back: 1, right: 2, left: 3, top: 4, bottom: 5,
 };
-const DIR_LABEL: Record<string, string> = Object.fromEntries(
-  DIRS.map((d) => [d.key, d.label])
-);
+const dirLabel = (key: string, lang: "ko" | "en"): string => {
+  const d = DIRS.find((x) => x.key === key);
+  return d ? (lang === "ko" ? d.label : d.labelEn) : key;
+};
 
 type Compose = { x: number; y: number; scale: number; rotation: number };
 type LightCfg = {
@@ -76,21 +78,21 @@ const DEFAULT_SURFACE: Surface = {
   envIntensity: 0.6,
 };
 const SURFACE_KEY = "tabler-editor:surface:v2";
-const TEX_MAPS: { key: TexMapKey; label: string; url: string | null }[] = [
-  { key: "none", label: "없음", url: null },
-  { key: "grain", label: "미세 입자", url: "/img/txmap2.jpg" },
-  { key: "cell", label: "셀 패턴", url: "/img/txmap1.jpg" },
+const TEX_MAPS: { key: TexMapKey; label: string; labelEn: string; url: string | null }[] = [
+  { key: "none", label: "없음", labelEn: "None", url: null },
+  { key: "grain", label: "미세 입자", labelEn: "Fine grain", url: "/img/txmap2.jpg" },
+  { key: "cell", label: "셀 패턴", labelEn: "Cell pattern", url: "/img/txmap1.jpg" },
 ];
-const SURFACE_PRESETS: { label: string; value: Partial<Surface> & { roughness: number; metalness: number } }[] = [
-  { label: "무광 플라스틱", value: { roughness: 0.85, metalness: 0.05 } },
-  { label: "광택 플라스틱", value: { roughness: 0.25, metalness: 0.05 } },
-  { label: "새틴", value: { roughness: 0.55, metalness: 0.3 } },
-  { label: "금속", value: { roughness: 0.35, metalness: 0.9 } },
+const SURFACE_PRESETS: { label: string; labelEn: string; value: Partial<Surface> & { roughness: number; metalness: number } }[] = [
+  { label: "무광 플라스틱", labelEn: "Matte plastic", value: { roughness: 0.85, metalness: 0.05 } },
+  { label: "광택 플라스틱", labelEn: "Glossy plastic", value: { roughness: 0.25, metalness: 0.05 } },
+  { label: "새틴", labelEn: "Satin", value: { roughness: 0.55, metalness: 0.3 } },
+  { label: "금속", labelEn: "Metal", value: { roughness: 0.35, metalness: 0.9 } },
 ];
 const LIGHT_NAMES = [
-  { key: "key", label: "키 라이트 (주광)" },
-  { key: "fill", label: "필 라이트 (보조광)" },
-  { key: "back", label: "백 라이트 (역광)" },
+  { key: "key", label: "키 라이트 (주광)", labelEn: "Key light (main)" },
+  { key: "fill", label: "필 라이트 (보조광)", labelEn: "Fill light" },
+  { key: "back", label: "백 라이트 (역광)", labelEn: "Back light (rim)" },
 ] as const;
 const lightPos = (cfg: LightCfg): [number, number, number] => [
   7 * Math.cos((cfg.angle * Math.PI) / 180),
@@ -321,6 +323,7 @@ function Model({
 }
 
 export default function TumblerEditor() {
+  const { lang, t } = useLang();
   // ----- UI state -----
   const [models, setModels] = useState<string[]>([]);
   const [modelUrl, setModelUrlState] = useState("");
@@ -732,10 +735,14 @@ export default function TumblerEditor() {
       // header
       ctx.fillStyle = "#10b981";
       ctx.font = F(26, 700);
-      ctx.fillText("테블러 TABLER STUDIO", 80, 96);
+      ctx.fillText(t("테블러 TABLER STUDIO", "TABLER STUDIO"), 80, 96);
       ctx.fillStyle = "#0f172a";
       ctx.font = F(54, 700);
-      ctx.fillText("커스텀 텀블러 제작 제안서", 80, 170);
+      ctx.fillText(
+        t("커스텀 텀블러 제작 제안서", "Custom Tumbler Production Proposal"),
+        80,
+        170
+      );
       const today = new Date();
       const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, "0")}.${String(today.getDate()).padStart(2, "0")}`;
       ctx.fillStyle = "#64748b";
@@ -769,7 +776,7 @@ export default function TumblerEditor() {
       let y = boxY + boxH + 70;
       ctx.fillStyle = "#0f172a";
       ctx.font = F(30, 700);
-      ctx.fillText("디자인 정보", 80, y);
+      ctx.fillText(t("디자인 정보", "Design info"), 80, y);
       y += 44;
       ctx.fillStyle = HEX_RE.test(hexRef.current) ? hexRef.current : "#3b82f6";
       ctx.fillRect(80, y - 26, 34, 34);
@@ -777,14 +784,19 @@ export default function TumblerEditor() {
       ctx.strokeRect(80, y - 26, 34, 34);
       const modelName = (modelUrlRef.current.split("/").pop() || "").replace(/\.(glb|gltf)$/i, "");
       const targetNames = [...imageTargetsRef.current]
-        .map((k) => DIR_LABEL[k] ?? k)
+        .map((k) => dirLabel(k, lang))
         .join(", ");
       ctx.fillStyle = "#334155";
       ctx.font = F(24);
       ctx.fillText(
-        `컬러 ${hexRef.current.toUpperCase()}  ·  모델 ${modelName}  ·  로고 ${
-          imageTargetsRef.current.size ? `적용 (${targetNames})` : "미적용"
-        }`,
+        t(
+          `컬러 ${hexRef.current.toUpperCase()}  ·  모델 ${modelName}  ·  로고 ${
+            imageTargetsRef.current.size ? `적용 (${targetNames})` : "미적용"
+          }`,
+          `Color ${hexRef.current.toUpperCase()}  ·  Model ${modelName}  ·  Logo ${
+            imageTargetsRef.current.size ? `applied (${targetNames})` : "not applied"
+          }`
+        ),
         134,
         y
       );
@@ -796,16 +808,16 @@ export default function TumblerEditor() {
         ctx.strokeRect(W - 280, y - 26, 200, 200);
         ctx.fillStyle = "#94a3b8";
         ctx.font = F(18);
-        ctx.fillText("적용 디자인", W - 280, y + 200);
+        ctx.fillText(t("적용 디자인", "Applied design"), W - 280, y + 200);
       }
 
       // specs
       y += 80;
       ctx.fillStyle = "#0f172a";
       ctx.font = F(30, 700);
-      ctx.fillText("제작 사양", 80, y);
+      ctx.fillText(t("제작 사양", "Production specs"), 80, y);
       y += 16;
-      SPECS.forEach(([k, v]) => {
+      getSpecs(lang).forEach(([k, v]) => {
         y += 46;
         ctx.fillStyle = "#94a3b8";
         ctx.font = F(22);
@@ -822,12 +834,24 @@ export default function TumblerEditor() {
       ctx.stroke();
       ctx.fillStyle = "#94a3b8";
       ctx.font = F(20);
-      ctx.fillText(`문의 ${CONTACT_EMAIL}  ·  테블러 커스텀 텀블러 3D 목업 스튜디오`, 80, H - 64);
+      ctx.fillText(
+        t(
+          `문의 ${CONTACT_EMAIL}  ·  테블러 커스텀 텀블러 3D 목업 스튜디오`,
+          `Contact ${CONTACT_EMAIL}  ·  TABLER Custom Tumbler 3D Mockup Studio`
+        ),
+        80,
+        H - 64
+      );
 
       const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF({ unit: "mm", format: "a4" });
       pdf.addImage(page.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297);
-      pdf.save(`테블러_제안서_${dateStr.replaceAll(".", "-")}.pdf`);
+      pdf.save(
+        t(
+          `테블러_제안서_${dateStr.replaceAll(".", "-")}.pdf`,
+          `TABLER_proposal_${dateStr.replaceAll(".", "-")}.pdf`
+        )
+      );
     } finally {
       setExporting(false);
     }
@@ -887,11 +911,14 @@ export default function TumblerEditor() {
             </Canvas>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-zinc-400">
-              3D 모델 로딩 중...
+              {t("3D 모델 로딩 중...", "Loading 3D model...")}
             </div>
           )}
           <div className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-white/80 px-2.5 py-1 text-xs text-zinc-500 backdrop-blur">
-            드래그 회전 · 휠 줌 · 면 선택 시 초록색으로 표시
+            {t(
+              "드래그 회전 · 휠 줌 · 면 선택 시 초록색으로 표시",
+              "Drag to rotate · scroll to zoom · selected faces flash green"
+            )}
           </div>
         </div>
 
@@ -899,14 +926,16 @@ export default function TumblerEditor() {
         <div className="flex flex-col gap-5 lg:col-span-2">
           {/* model select */}
           <div>
-            <label className={label} htmlFor="model-select">3D 모델</label>
+            <label className={label} htmlFor="model-select">{t("3D 모델", "3D Model")}</label>
             <select
               id="model-select"
               value={modelUrl}
               onChange={(e) => setModelUrl(e.target.value)}
               className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-emerald-500"
             >
-              {models.length === 0 && <option value="">models 폴더에 .glb 없음</option>}
+              {models.length === 0 && (
+                <option value="">{t("models 폴더에 .glb 없음", "No .glb in models folder")}</option>
+              )}
               {models.map((f) => (
                 <option key={f} value={"/models/" + f}>
                   {f.replace(/\.(glb|gltf)$/i, "")}
@@ -918,23 +947,23 @@ export default function TumblerEditor() {
           {/* tabs */}
           <div className="flex border-b border-zinc-200">
             <button onClick={() => setTab("color")} className={tabBtn(tab === "color")}>
-              컬러
+              {t("컬러", "Color")}
             </button>
             <button onClick={() => setTab("image")} className={tabBtn(tab === "image")}>
-              이미지
+              {t("이미지", "Image")}
             </button>
             <button onClick={() => setTab("light")} className={tabBtn(tab === "light")}>
-              조명
+              {t("조명", "Light")}
             </button>
             <button onClick={() => setTab("surface")} className={tabBtn(tab === "surface")}>
-              질감
+              {t("질감", "Surface")}
             </button>
           </div>
 
           {/* color panel */}
           <div className={tab === "color" ? "flex flex-col gap-4" : "hidden"}>
             <div>
-              <span className={label}>색상 선택</span>
+              <span className={label}>{t("색상 선택", "Pick a color")}</span>
               <div className="flex items-center gap-2.5">
                 <input
                   type="color"
@@ -957,7 +986,7 @@ export default function TumblerEditor() {
               </div>
             </div>
             <div>
-              <span className={label}>프리셋</span>
+              <span className={label}>{t("프리셋", "Presets")}</span>
               <div className="grid grid-cols-6 gap-2">
                 {SWATCHES.map((c) => (
                   <button
@@ -979,7 +1008,10 @@ export default function TumblerEditor() {
             {/* 이미지 적용 면 (방향 기준 6면) */}
             <div>
               <span className={label}>
-                이미지 적용 면 <span className="normal-case text-zinc-300">— 선택 시 3D에서 초록 표시</span>
+                {t("이미지 적용 면", "Apply image to face")}{" "}
+                <span className="normal-case text-zinc-300">
+                  {t("— 선택 시 3D에서 초록 표시", "— selected face flashes green in 3D")}
+                </span>
               </span>
               <div className="grid grid-cols-2 gap-1.5">
                 <button
@@ -987,7 +1019,7 @@ export default function TumblerEditor() {
                   className={`${targetBtn(target === "all")} col-span-2`}
                   disabled={!ready}
                 >
-                  전체
+                  {t("전체", "All")}
                 </button>
                 {DIRS.map((d) => (
                   <button
@@ -996,7 +1028,7 @@ export default function TumblerEditor() {
                     className={targetBtn(target === d.key)}
                     disabled={!ready}
                   >
-                    {d.label}
+                    {t(d.label, d.labelEn)}
                   </button>
                 ))}
               </div>
@@ -1020,9 +1052,9 @@ export default function TumblerEditor() {
                   : "border-zinc-300 text-zinc-400 hover:border-emerald-400 hover:text-emerald-500"
               }`}
             >
-              클릭 또는 드래그로
+              {t("클릭 또는 드래그로", "Click or drag & drop")}
               <br />
-              이미지 업로드 (PNG/JPG)
+              {t("이미지 업로드 (PNG/JPG)", "to upload an image (PNG/JPG)")}
             </div>
             <input
               ref={fileInputRef}
@@ -1055,10 +1087,10 @@ export default function TumblerEditor() {
               <div className="flex flex-col gap-2.5">
                 {(
                   [
-                    ["가로 위치", Math.round(compose.x * 100), 0, 100, "%", (v: number) => setCompose((c) => ({ ...c, x: v / 100 }))],
-                    ["세로 위치", Math.round(compose.y * 100), 0, 100, "%", (v: number) => setCompose((c) => ({ ...c, y: v / 100 }))],
-                    ["크기", Math.round(compose.scale * 100), 5, 150, "%", (v: number) => setCompose((c) => ({ ...c, scale: v / 100 }))],
-                    ["회전", Math.round(compose.rotation), -180, 180, "°", (v: number) => setCompose((c) => ({ ...c, rotation: v }))],
+                    [t("가로 위치", "Horizontal"), Math.round(compose.x * 100), 0, 100, "%", (v: number) => setCompose((c) => ({ ...c, x: v / 100 }))],
+                    [t("세로 위치", "Vertical"), Math.round(compose.y * 100), 0, 100, "%", (v: number) => setCompose((c) => ({ ...c, y: v / 100 }))],
+                    [t("크기", "Size"), Math.round(compose.scale * 100), 5, 150, "%", (v: number) => setCompose((c) => ({ ...c, scale: v / 100 }))],
+                    [t("회전", "Rotation"), Math.round(compose.rotation), -180, 180, "°", (v: number) => setCompose((c) => ({ ...c, rotation: v }))],
                   ] as const
                 ).map(([name, val, min, max, unit, set]) => (
                   <div key={name}>
@@ -1087,19 +1119,20 @@ export default function TumblerEditor() {
               disabled={!imageLoaded}
               className="rounded-lg bg-emerald-500 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              모델에 적용
+              {t("모델에 적용", "Apply to model")}
             </button>
             <button
               onClick={removeImage}
               disabled={!imageApplied}
               className="rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              이미지 제거
+              {t("이미지 제거", "Remove image")}
             </button>
             <p className="text-xs leading-relaxed text-zinc-400">
-              적용 면(앞/뒤/좌/우/위/아래)을 고르고 적용하면 그 방향 면에만
-              입혀짐. 미리보기 드래그 = 이동, 휠 = 크기. 적용 후에도 실시간
-              수정 가능.
+              {t(
+                "적용 면(앞/뒤/좌/우/위/아래)을 고르고 적용하면 그 방향 면에만 입혀짐. 미리보기 드래그 = 이동, 휠 = 크기. 적용 후에도 실시간 수정 가능.",
+                "Pick a face (front/back/left/right/top/bottom) and apply — the image goes on that face only. Drag the preview to move, scroll to resize. Live-editable after applying."
+              )}
             </p>
           </div>
 
@@ -1107,7 +1140,7 @@ export default function TumblerEditor() {
           <div className={tab === "light" ? "flex flex-col gap-3" : "hidden"}>
             <div>
               <div className="mb-1 flex justify-between text-[13px] text-zinc-600">
-                <span>환경광 (전체 밝기)</span>
+                <span>{t("환경광 (전체 밝기)", "Ambient (overall brightness)")}</span>
                 <span className="font-mono text-xs text-zinc-400">
                   {Math.round(lights.ambient * 100)}%
                 </span>
@@ -1122,25 +1155,26 @@ export default function TumblerEditor() {
               />
             </div>
 
-            {LIGHT_NAMES.map(({ key: lk, label: lname }) => {
+            {LIGHT_NAMES.map(({ key: lk, label: lname, labelEn: lnameEn }) => {
               const cfg = lights[lk];
+              const name_ = t(lname, lnameEn);
               return (
                 <div key={lk} className="rounded-xl border border-zinc-200 p-3">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[13px] font-semibold text-zinc-700">{lname}</span>
+                    <span className="text-[13px] font-semibold text-zinc-700">{name_}</span>
                     <input
                       type="color"
                       value={cfg.color}
                       onChange={(e) => updateLight(lk, { color: e.target.value })}
                       className="h-7 w-9 cursor-pointer rounded-md border border-zinc-200 bg-white p-0.5"
-                      aria-label={`${lname} 색상`}
+                      aria-label={t(`${name_} 색상`, `${name_} color`)}
                     />
                   </div>
                   {(
                     [
-                      ["강도", Math.round(cfg.intensity * 100), 0, 300, "%", (v: number) => updateLight(lk, { intensity: v / 100 })],
-                      ["방향", Math.round(cfg.angle), 0, 360, "°", (v: number) => updateLight(lk, { angle: v })],
-                      ["높이", Math.round(cfg.height * 10) / 10, -5, 10, "", (v: number) => updateLight(lk, { height: v })],
+                      [t("강도", "Intensity"), Math.round(cfg.intensity * 100), 0, 300, "%", (v: number) => updateLight(lk, { intensity: v / 100 })],
+                      [t("방향", "Angle"), Math.round(cfg.angle), 0, 360, "°", (v: number) => updateLight(lk, { angle: v })],
+                      [t("높이", "Height"), Math.round(cfg.height * 10) / 10, -5, 10, "", (v: number) => updateLight(lk, { height: v })],
                     ] as const
                   ).map(([name, val, min, max, unit, set]) => (
                     <div key={name} className="mb-1.5 last:mb-0">
@@ -1155,7 +1189,7 @@ export default function TumblerEditor() {
                         type="range"
                         min={min}
                         max={max}
-                        step={name === "높이" ? 0.5 : 1}
+                        step={unit === "" ? 0.5 : 1}
                         value={val}
                         onChange={(e) => set(Number(e.target.value))}
                         className="w-full cursor-pointer accent-emerald-500"
@@ -1170,18 +1204,20 @@ export default function TumblerEditor() {
               onClick={() => updateLights(DEFAULT_LIGHTS)}
               className="rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-200"
             >
-              기본값으로 초기화
+              {t("기본값으로 초기화", "Reset to defaults")}
             </button>
             <p className="text-xs leading-relaxed text-zinc-400">
-              키 = 주광, 필 = 그림자 완화용 보조광, 백 = 윤곽 살리는 역광.
-              설정은 자동 저장되고 PDF 스냅샷에도 반영됨.
+              {t(
+                "키 = 주광, 필 = 그림자 완화용 보조광, 백 = 윤곽 살리는 역광. 설정은 자동 저장되고 PDF 스냅샷에도 반영됨.",
+                "Key = main light, fill = softens shadows, back = rim light for silhouette. Settings auto-save and apply to PDF snapshots."
+              )}
             </p>
           </div>
 
           {/* surface panel — 질감 */}
           <div className={tab === "surface" ? "flex flex-col gap-3" : "hidden"}>
             <div>
-              <span className={label}>프리셋</span>
+              <span className={label}>{t("프리셋", "Presets")}</span>
               <div className="grid grid-cols-2 gap-1.5">
                 {SURFACE_PRESETS.map((p) => {
                   const active =
@@ -1193,7 +1229,7 @@ export default function TumblerEditor() {
                       onClick={() => updateSurface(p.value)}
                       className={targetBtn(active)}
                     >
-                      {p.label}
+                      {t(p.label, p.labelEn)}
                     </button>
                   );
                 })}
@@ -1201,15 +1237,15 @@ export default function TumblerEditor() {
             </div>
 
             <div>
-              <span className={label}>표면 텍스처 (범프맵)</span>
+              <span className={label}>{t("표면 텍스처 (범프맵)", "Surface texture (bump map)")}</span>
               <div className="grid grid-cols-3 gap-1.5">
-                {TEX_MAPS.map((t) => (
+                {TEX_MAPS.map((tm) => (
                   <button
-                    key={t.key}
-                    onClick={() => updateSurface({ texMap: t.key })}
-                    className={targetBtn(surface.texMap === t.key)}
+                    key={tm.key}
+                    onClick={() => updateSurface({ texMap: tm.key })}
+                    className={targetBtn(surface.texMap === tm.key)}
                   >
-                    {t.label}
+                    {t(tm.label, tm.labelEn)}
                   </button>
                 ))}
               </div>
@@ -1217,10 +1253,10 @@ export default function TumblerEditor() {
 
             {(
               [
-                ["거칠기 (러프니스)", Math.round(surface.roughness * 100), "매끈 ← → 거침", (v: number) => updateSurface({ roughness: v / 100 })],
-                ["금속성 (메탈니스)", Math.round(surface.metalness * 100), "플라스틱 ← → 금속", (v: number) => updateSurface({ metalness: v / 100 })],
-                ["텍스처 강도", Math.round(surface.bumpScale * 100), "요철 깊이", (v: number) => updateSurface({ bumpScale: v / 100 })],
-                ["환경 반사", Math.round(surface.envIntensity * 100), "HDR 반사 강도 (startup.hdr)", (v: number) => updateSurface({ envIntensity: v / 100 })],
+                [t("거칠기 (러프니스)", "Roughness"), Math.round(surface.roughness * 100), t("매끈 ← → 거침", "smooth ← → rough"), (v: number) => updateSurface({ roughness: v / 100 })],
+                [t("금속성 (메탈니스)", "Metalness"), Math.round(surface.metalness * 100), t("플라스틱 ← → 금속", "plastic ← → metal"), (v: number) => updateSurface({ metalness: v / 100 })],
+                [t("텍스처 강도", "Texture strength"), Math.round(surface.bumpScale * 100), t("요철 깊이", "bump depth"), (v: number) => updateSurface({ bumpScale: v / 100 })],
+                [t("환경 반사", "Env reflection"), Math.round(surface.envIntensity * 100), t("HDR 반사 강도 (startup.hdr)", "HDR reflection intensity (startup.hdr)"), (v: number) => updateSurface({ envIntensity: v / 100 })],
               ] as const
             ).map(([name, val, hint, set]) => (
               <div key={name}>
@@ -1244,10 +1280,13 @@ export default function TumblerEditor() {
               onClick={() => updateSurface(DEFAULT_SURFACE)}
               className="rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-200"
             >
-              기본값으로 초기화 (무광 플라스틱)
+              {t("기본값으로 초기화 (무광 플라스틱)", "Reset to default (matte plastic)")}
             </button>
             <p className="text-xs leading-relaxed text-zinc-400">
-              모델 전체에 적용됨. 설정은 자동 저장되고 PDF 스냅샷에도 반영됨.
+              {t(
+                "모델 전체에 적용됨. 설정은 자동 저장되고 PDF 스냅샷에도 반영됨.",
+                "Applies to the whole model. Settings auto-save and apply to PDF snapshots."
+              )}
             </p>
           </div>
 
@@ -1257,7 +1296,9 @@ export default function TumblerEditor() {
             disabled={exporting || !modelUrl}
             className="mt-auto rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {exporting ? "PDF 생성 중..." : "📄 PDF로 내보내기"}
+            {exporting
+              ? t("PDF 생성 중...", "Generating PDF...")
+              : t("📄 PDF로 내보내기", "📄 Export as PDF")}
           </button>
         </div>
       </div>
