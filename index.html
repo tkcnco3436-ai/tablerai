@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>텀블러 3D 목업 에디터</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f1f3;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ===== 뷰어 영역 ===== */
+    .viewer-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      min-width: 0;
+    }
+    .viewer-area h1 {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    /* ===== 사이드 패널 ===== */
+    .sidebar {
+      width: 320px;
+      flex-shrink: 0;
+      background: #fff;
+      border-left: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -4px 0 16px rgba(0,0,0,.04);
+    }
+    .sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 15px;
+      font-weight: 600;
+      color: #111;
+    }
+
+    /* 모델 선택 */
+    .model-select-wrap {
+      padding: 14px 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .model-select-wrap label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+    }
+    select#modelSelect {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #374151;
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+    }
+    select#modelSelect:focus { border-color: #2563eb; }
+
+    /* 적용 부위 (컬러/이미지 공용) */
+    .material-wrap {
+      padding: 14px 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .material-wrap > label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+    }
+    .material-wrap .material-list {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    /* 탭 */
+    .tabs { display: flex; border-bottom: 1px solid #e5e7eb; }
+    .tab {
+      flex: 1;
+      padding: 12px 0;
+      text-align: center;
+      font-size: 14px;
+      color: #6b7280;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .15s;
+      user-select: none;
+    }
+    .tab:hover { background: #f9fafb; }
+    .tab.active {
+      color: #2563eb;
+      border-bottom-color: #2563eb;
+      font-weight: 600;
+    }
+
+    .panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: none;
+    }
+    .panel.active { display: block; }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin: 18px 0 10px;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* ===== 컬러 패널 ===== */
+    .color-row { display: flex; align-items: center; gap: 10px; }
+    input[type="color"] {
+      width: 44px;
+      height: 38px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      background: none;
+      padding: 2px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 14px;
+      outline: none;
+      min-width: 0;
+    }
+    input[type="text"]:focus { border-color: #2563eb; }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    .swatch {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      border: 2px solid #e5e7eb;
+      cursor: pointer;
+      transition: transform .1s;
+    }
+    .swatch:hover { transform: scale(1.1); }
+    .swatch.selected { border-color: #2563eb; }
+
+    /* 머티리얼(부위) 선택 */
+    .material-list { display: flex; flex-direction: column; gap: 6px; }
+    .material-item {
+      padding: 9px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #374151;
+      cursor: pointer;
+      transition: all .1s;
+    }
+    .material-item:hover { background: #f9fafb; }
+    .material-item.selected {
+      border-color: #2563eb;
+      background: #eff6ff;
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    /* ===== 이미지 패널 ===== */
+    .dropzone {
+      border: 2px dashed #d1d5db;
+      border-radius: 10px;
+      padding: 24px 16px;
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: #2563eb;
+      background: #eff6ff;
+      color: #2563eb;
+    }
+    .dropzone svg { margin-bottom: 8px; }
+
+    /* 합성 미리보기 캔버스 — 드래그로 이미지 배치 */
+    #composeCanvas {
+      width: 100%;
+      aspect-ratio: 1;
+      margin-top: 14px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+    #composeCanvas:active { cursor: grabbing; }
+
+    /* 슬라이더 컨트롤 */
+    .slider-group { display: none; }
+    .slider-group.show { display: block; }
+    .slider-row { margin-bottom: 12px; }
+    .slider-row label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    .slider-row label span { color: #9ca3af; font-family: monospace; font-size: 12px; }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #f3f4f6; color: #374151; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .hint {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    /* ===== 반응형: 모바일/태블릿 ===== */
+    @media (max-width: 900px) {
+      body { flex-direction: column; overflow: auto; }
+      .viewer-area {
+        padding: 12px;
+        height: 52vh;
+        flex: none;
+      }
+      .viewer-area h1 { font-size: 15px; margin-bottom: 8px; }
+      .sidebar {
+        width: 100%;
+        flex: 1;
+        border-left: none;
+        border-top: 1px solid #e5e7eb;
+        box-shadow: 0 -4px 16px rgba(0,0,0,.04);
+      }
+      .sidebar-header { display: none; }
+      .model-select-wrap { padding: 10px 16px; }
+      .panel { padding: 16px; }
+      .swatches { grid-template-columns: repeat(8, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .viewer-area { height: 45vh; }
+      .swatches { grid-template-columns: repeat(6, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== 3D 뷰어 ===== -->
+  <div class="viewer-area">
+    <h1>텀블러 컬러 목업 — 드래그로 360° 회전 (상하/좌우)</h1>
+    <!-- models 폴더의 .glb/.gltf 파일을 자동 스캔해서 셀렉트 박스에 표시 -->
+    <model-viewer
+      id="viewer"
+      camera-controls
+      disable-zoom
+      camera-orbit="0deg 90deg auto"
+      interaction-prompt="none"
+      shadow-intensity="1">
+    </model-viewer>
+  </div>
+
+  <!-- ===== 사이드 패널 ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">에디터</div>
+
+    <div class="model-select-wrap">
+      <label for="modelSelect">3D 모델</label>
+      <select id="modelSelect">
+        <option value="">불러오는 중…</option>
+      </select>
+    </div>
+
+    <!-- 컬러/이미지 공용: 어느 부위(면)에 적용할지 -->
+    <div class="material-wrap">
+      <label>적용 부위</label>
+      <div class="material-list" id="materialList">
+        <div class="material-item selected" data-index="all">전체</div>
+        <!-- 모델 로드 후 머티리얼 목록 자동 생성 -->
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-panel="colorPanel">컬러</div>
+      <div class="tab" data-panel="imagePanel">이미지</div>
+    </div>
+
+    <!-- 컬러 패널 -->
+    <div class="panel active" id="colorPanel">
+      <div class="section-label">색상 선택</div>
+      <div class="color-row">
+        <input type="color" id="picker" value="#3b82f6">
+        <input type="text" id="hexInput" value="#3b82f6" maxlength="7" placeholder="#000000">
+      </div>
+
+      <div class="section-label">프리셋</div>
+      <div class="swatches" id="swatches">
+        <div class="swatch" style="background:#ef4444" data-hex="#ef4444"></div>
+        <div class="swatch" style="background:#f59e0b" data-hex="#f59e0b"></div>
+        <div class="swatch" style="background:#22c55e" data-hex="#22c55e"></div>
+        <div class="swatch" style="background:#3b82f6" data-hex="#3b82f6"></div>
+        <div class="swatch" style="background:#8b5cf6" data-hex="#8b5cf6"></div>
+        <div class="swatch" style="background:#ec4899" data-hex="#ec4899"></div>
+        <div class="swatch" style="background:#ffffff" data-hex="#ffffff"></div>
+        <div class="swatch" style="background:#d1d5db" data-hex="#d1d5db"></div>
+        <div class="swatch" style="background:#6b7280" data-hex="#6b7280"></div>
+        <div class="swatch" style="background:#1f2937" data-hex="#1f2937"></div>
+        <div class="swatch" style="background:#78350f" data-hex="#78350f"></div>
+        <div class="swatch" style="background:#0c4a6e" data-hex="#0c4a6e"></div>
+      </div>
+    </div>
+
+    <!-- 이미지 패널 -->
+    <div class="panel" id="imagePanel">
+      <div class="section-label">이미지 업로드</div>
+      <div class="dropzone" id="dropzone">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+        </svg>
+        <div>클릭 또는 드래그로<br>이미지 업로드 (PNG/JPG)</div>
+        <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden>
+      </div>
+
+      <canvas id="composeCanvas" width="1024" height="1024"></canvas>
+
+      <div class="slider-group" id="sliderGroup">
+        <div class="section-label">위치 / 크기 조절 (미리보기 드래그 = 이동, 휠 = 크기)</div>
+        <div class="slider-row">
+          <label>가로 위치 <span id="valX">50%</span></label>
+          <input type="range" id="posX" min="0" max="100" value="50">
+        </div>
+        <div class="slider-row">
+          <label>세로 위치 <span id="valY">50%</span></label>
+          <input type="range" id="posY" min="0" max="100" value="50">
+        </div>
+        <div class="slider-row">
+          <label>크기 <span id="valScale">40%</span></label>
+          <input type="range" id="imgScale" min="5" max="150" value="40">
+        </div>
+        <div class="slider-row">
+          <label>회전 <span id="valRot">0°</span></label>
+          <input type="range" id="imgRot" min="-180" max="180" value="0">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="applyImageBtn" disabled>모델에 적용</button>
+      <button class="btn btn-secondary" id="removeImageBtn" disabled>이미지 제거</button>
+
+      <div class="hint">
+        위 "적용 부위"에서 면을 고르고 적용하면 그 면에만 입혀짐.
+        미리보기를 드래그해서 이미지 위치 이동, 마우스 휠로 크기 조절.
+        적용 후에도 드래그/슬라이더로 실시간 수정 가능.
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    // file://로 직접 열면 모델 로드 불가 → 안내 배너
+    if (location.protocol === 'file:') {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99;background:#dc2626;color:#fff;padding:12px;text-align:center;font-size:14px;font-weight:600';
+      banner.textContent = '⚠ 파일을 직접 열면 3D 모델을 불러올 수 없음 — 폴더의 start.bat을 더블클릭해서 실행하세요';
+      document.body.prepend(banner);
+    }
+
+    const viewer = document.querySelector('#viewer');
+    const picker = document.querySelector('#picker');
+    const hexInput = document.querySelector('#hexInput');
+    const materialList = document.querySelector('#materialList');
+
+    let selectedMaterial = 'all'; // 'all' 또는 머티리얼 인덱스
+    let currentHex = '#3b82f6';
+
+    // ===== 부위(머티리얼) 선택 =====
+    function selectionIndexes() {
+      if (!viewer.model) return [];
+      if (selectedMaterial === 'all') return viewer.model.materials.map((_, i) => i);
+      return [Number(selectedMaterial)];
+    }
+
+    // 모델 로드 실패 시 화면에 에러 표시
+    viewer.addEventListener('error', (e) => {
+      const banner = document.createElement('div');
+      banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99;background:#dc2626;color:#fff;padding:12px;text-align:center;font-size:13px';
+      banner.textContent = '모델 로드 실패: ' + (e.detail?.sourceError?.message || viewer.src);
+      document.body.prepend(banner);
+    });
+
+    materialList.addEventListener('click', (e) => {
+      const item = e.target.closest('.material-item');
+      if (!item) return;
+      materialList.querySelectorAll('.material-item').forEach(el => el.classList.remove('selected'));
+      item.classList.add('selected');
+      selectedMaterial = item.dataset.index;
+    });
+
+    viewer.addEventListener('load', () => {
+      // 모델 교체 시 부위 목록/이미지 상태 초기화
+      materialList.querySelectorAll('.material-item:not([data-index="all"])').forEach(el => el.remove());
+      materialList.querySelector('[data-index="all"]').classList.add('selected');
+      selectedMaterial = 'all';
+      imageTargets.clear();
+      removeImageBtn.disabled = true;
+
+      viewer.model.materials.forEach((material, i) => {
+        const item = document.createElement('div');
+        item.className = 'material-item';
+        item.dataset.index = i;
+        item.textContent = material.name || `부위 ${i + 1}`;
+        materialList.appendChild(item);
+      });
+      // 저장된 편집 상태 있으면 복원, 없으면 현재 색 적용
+      if (!restoreState()) applyColor(currentHex);
+    });
+
+    // ===== models 폴더 스캔 → 모델 셀렉트 =====
+    const modelSelect = document.querySelector('#modelSelect');
+
+    async function loadModelList() {
+      let files = [];
+      // 1차: 서버 디렉토리 리스팅 파싱 (python -m http.server 등)
+      try {
+        const res = await fetch('models/');
+        if (res.ok) {
+          const html = await res.text();
+          files = [...html.matchAll(/href="([^"]+\.(?:glb|gltf))"/gi)]
+            .map(m => decodeURIComponent(m[1]).split('/').pop());
+        }
+      } catch (e) { /* 리스팅 미지원 서버 */ }
+      // 2차 폴백: models/models.json 매니페스트
+      if (!files.length) {
+        try {
+          const res = await fetch('models/models.json');
+          if (res.ok) files = await res.json();
+        } catch (e) { /* 매니페스트 없음 */ }
+      }
+      files = [...new Set(files)];
+
+      modelSelect.innerHTML = '';
+      if (!files.length) {
+        modelSelect.innerHTML = '<option value="">models 폴더에 .glb 없음</option>';
+        return;
+      }
+      files.forEach((f) => {
+        const opt = document.createElement('option');
+        opt.value = 'models/' + f;
+        opt.textContent = f.replace(/\.(glb|gltf)$/i, '');
+        modelSelect.appendChild(opt);
+      });
+      viewer.src = modelSelect.value + '?v=' + Date.now(); // 첫 모델 자동 로드 (캐시 우회)
+    }
+
+    modelSelect.addEventListener('change', () => {
+      if (modelSelect.value) viewer.src = modelSelect.value + '?v=' + Date.now();
+    });
+
+    loadModelList();
+
+    // ===== 컬러 =====
+    function applyColor(hex) {
+      if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+      currentHex = hex;
+      picker.value = hex;
+      hexInput.value = hex;
+      const sel = selectionIndexes();
+      // 이미지 없는 부위는 단색 적용
+      sel.forEach((i) => {
+        if (!imageTargets.has(i)) {
+          viewer.model.materials[i].pbrMetallicRoughness.setBaseColorFactor(hex);
+        }
+      });
+      // 이미지 입혀진 부위가 선택에 포함되면 배경색 갱신해서 다시 굽기
+      if (sel.some(i => imageTargets.has(i))) bakeAndSet();
+      drawComposite(); // 미리보기 배경색 동기화
+      scheduleSave();
+    }
+
+    picker.addEventListener('input', (e) => applyColor(e.target.value));
+
+    hexInput.addEventListener('input', (e) => {
+      let v = e.target.value.trim();
+      if (!v.startsWith('#')) v = '#' + v;
+      applyColor(v);
+    });
+
+    document.querySelector('#swatches').addEventListener('click', (e) => {
+      const sw = e.target.closest('.swatch');
+      if (!sw) return;
+      document.querySelectorAll('.swatch').forEach(el => el.classList.remove('selected'));
+      sw.classList.add('selected');
+      applyColor(sw.dataset.hex);
+    });
+
+    // ===== 탭 전환 =====
+    document.querySelectorAll('.tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.panel).classList.add('active');
+      });
+    });
+
+    // ===== 이미지 업로드 =====
+    const dropzone = document.querySelector('#dropzone');
+    const fileInput = document.querySelector('#fileInput');
+    const sliderGroup = document.querySelector('#sliderGroup');
+    const applyImageBtn = document.querySelector('#applyImageBtn');
+    const removeImageBtn = document.querySelector('#removeImageBtn');
+
+    const uploadedImg = new Image();
+    let imageLoaded = false;
+    const imageTargets = new Set(); // 합성 텍스처가 입혀진 머티리얼 인덱스
+
+    let uploadedDataUrl = null; // localStorage 저장용 원본
+
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        uploadedDataUrl = reader.result;
+        uploadedImg.onload = () => {
+          imageLoaded = true;
+          applyImageBtn.disabled = false;
+          sliderGroup.classList.add('show');
+          drawComposite();
+          if (imageTargets.size) bakeAndSet(); // 이미지 교체 시 즉시 반영
+          scheduleSave();
+        };
+        uploadedImg.src = uploadedDataUrl;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    // ===== 합성 캔버스: 미리보기 겸 텍스처 원본 =====
+    const canvas = document.querySelector('#composeCanvas');
+    const TEX_SIZE = canvas.width; // 1024
+    const ctx = canvas.getContext('2d');
+
+    const compose = { x: 0.5, y: 0.5, scale: 0.4, rotation: 0 };
+
+    function drawComposite() {
+      ctx.fillStyle = currentHex;
+      ctx.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
+      if (!imageLoaded) return;
+      const w = TEX_SIZE * compose.scale;
+      const h = w * (uploadedImg.naturalHeight / uploadedImg.naturalWidth);
+      ctx.save();
+      ctx.translate(compose.x * TEX_SIZE, compose.y * TEX_SIZE);
+      ctx.rotate(compose.rotation * Math.PI / 180);
+      ctx.drawImage(uploadedImg, -w / 2, -h / 2, w, h);
+      ctx.restore();
+    }
+
+    // 연속 입력 대응: 적용 중이면 1건만 대기시키고 끝나면 이어서 실행
+    let applying = false;
+    let queued = false;
+
+    async function bakeAndSet() {
+      if (!viewer.model || !imageTargets.size) return;
+      if (applying) { queued = true; return; }
+      applying = true;
+      drawComposite();
+      const texture = await viewer.createTexture(canvas.toDataURL('image/png'));
+      imageTargets.forEach((i) => {
+        const material = viewer.model.materials[i];
+        material.pbrMetallicRoughness.baseColorTexture.setTexture(texture);
+        // 합성 텍스처 색 그대로 보이도록 베이스 컬러 흰색 고정
+        material.pbrMetallicRoughness.setBaseColorFactor('#ffffff');
+      });
+      applying = false;
+      if (queued) { queued = false; bakeAndSet(); }
+    }
+
+    function refresh() {
+      drawComposite();
+      if (imageTargets.size) bakeAndSet();
+      scheduleSave();
+    }
+
+    // ===== 미리보기 드래그 = 이동, 휠 = 크기 =====
+    let dragging = false;
+
+    function dragTo(e) {
+      const r = canvas.getBoundingClientRect();
+      compose.x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+      compose.y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+      syncSliders();
+      refresh();
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      if (!imageLoaded) return;
+      dragging = true;
+      canvas.setPointerCapture(e.pointerId);
+      dragTo(e);
+    });
+    canvas.addEventListener('pointermove', (e) => { if (dragging) dragTo(e); });
+    canvas.addEventListener('pointerup', () => { dragging = false; });
+
+    canvas.addEventListener('wheel', (e) => {
+      if (!imageLoaded) return;
+      e.preventDefault();
+      compose.scale = Math.min(1.5, Math.max(0.05, compose.scale - e.deltaY * 0.0008));
+      syncSliders();
+      refresh();
+    }, { passive: false });
+
+    // ===== 슬라이더 ↔ 드래그 양방향 동기화 =====
+    const posX = document.getElementById('posX'), valX = document.getElementById('valX');
+    const posY = document.getElementById('posY'), valY = document.getElementById('valY');
+    const imgScale = document.getElementById('imgScale'), valScale = document.getElementById('valScale');
+    const imgRot = document.getElementById('imgRot'), valRot = document.getElementById('valRot');
+
+    function syncSliders() {
+      posX.value = Math.round(compose.x * 100); valX.textContent = posX.value + '%';
+      posY.value = Math.round(compose.y * 100); valY.textContent = posY.value + '%';
+      imgScale.value = Math.round(compose.scale * 100); valScale.textContent = imgScale.value + '%';
+      imgRot.value = Math.round(compose.rotation); valRot.textContent = imgRot.value + '°';
+    }
+
+    posX.addEventListener('input', () => { compose.x = posX.value / 100; valX.textContent = posX.value + '%'; refresh(); });
+    posY.addEventListener('input', () => { compose.y = posY.value / 100; valY.textContent = posY.value + '%'; refresh(); });
+    imgScale.addEventListener('input', () => { compose.scale = imgScale.value / 100; valScale.textContent = imgScale.value + '%'; refresh(); });
+    imgRot.addEventListener('input', () => { compose.rotation = Number(imgRot.value); valRot.textContent = imgRot.value + '°'; refresh(); });
+
+    // ===== 적용 / 제거 =====
+    function clearImageFrom(indexes) {
+      indexes.forEach((i) => {
+        const material = viewer.model.materials[i];
+        material.pbrMetallicRoughness.baseColorTexture.setTexture(null);
+        material.pbrMetallicRoughness.setBaseColorFactor(currentHex);
+      });
+    }
+
+    applyImageBtn.addEventListener('click', () => {
+      if (!imageLoaded || !viewer.model) return;
+      // 기존 적용 부위 해제 후 현재 선택 부위로 교체
+      clearImageFrom([...imageTargets]);
+      imageTargets.clear();
+      selectionIndexes().forEach(i => imageTargets.add(i));
+      bakeAndSet();
+      removeImageBtn.disabled = false;
+      scheduleSave();
+    });
+
+    removeImageBtn.addEventListener('click', () => {
+      clearImageFrom([...imageTargets]);
+      imageTargets.clear();
+      removeImageBtn.disabled = true;
+      scheduleSave();
+    });
+
+    // ===== 모델별 편집 상태 저장/복원 (localStorage) =====
+    let saveTimer = null;
+
+    function storageKey() {
+      return 'tumbler-editor:' + (modelSelect.value || '');
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveState, 300);
+    }
+
+    function saveState() {
+      if (!modelSelect.value) return;
+      const state = {
+        hex: currentHex,
+        compose: { ...compose },
+        targets: [...imageTargets],
+        image: uploadedDataUrl,
+      };
+      try {
+        localStorage.setItem(storageKey(), JSON.stringify(state));
+      } catch (e) {
+        // 용량 초과 시 이미지 빼고 위치/색상만 저장
+        try {
+          localStorage.setItem(storageKey(), JSON.stringify({ ...state, image: null }));
+        } catch (e2) { /* 저장 불가 환경 */ }
+      }
+    }
+
+    function restoreState() {
+      let state = null;
+      try { state = JSON.parse(localStorage.getItem(storageKey())); } catch (e) {}
+      if (!state) return false;
+
+      Object.assign(compose, state.compose || {});
+      syncSliders();
+      if (state.hex) {
+        currentHex = state.hex;
+        picker.value = state.hex;
+        hexInput.value = state.hex;
+      }
+      viewer.model.materials.forEach((material) => {
+        material.pbrMetallicRoughness.setBaseColorFactor(currentHex);
+      });
+
+      if (state.image && state.targets && state.targets.length) {
+        uploadedDataUrl = state.image;
+        uploadedImg.onload = () => {
+          imageLoaded = true;
+          applyImageBtn.disabled = false;
+          sliderGroup.classList.add('show');
+          state.targets.forEach(i => imageTargets.add(i));
+          removeImageBtn.disabled = false;
+          bakeAndSet();
+        };
+        uploadedImg.src = state.image;
+      } else {
+        drawComposite();
+      }
+      return true;
+    }
+
+    drawComposite(); // 초기 미리보기(배경색만)
+  </script>
+</body>
+</html>
