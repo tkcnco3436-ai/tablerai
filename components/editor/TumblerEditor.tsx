@@ -222,22 +222,19 @@ function splitMeshByDirection(
   mesh.material = DIRS.map(() => base.clone());
 }
 
-// 제품 방향 자동 감지:
-// - 가로로 긴 수평축 = 좌우 방향 (옆면 = 가로 짧은 면)
-// - 짧은 수평축 = 앞뒤 방향
-// - Tabler_table / hinge_bracket 메시가 있는 쪽 = 뒷면
+// 제품 방향 감지 — fix 모델 기준으로 전 모델 통일:
+// - 앞뒤 법선 = X축 고정. 박스의 가로로 긴 면(래치 있는 넓은 면)이 앞면.
+//   (테이블이 X로 펼쳐지는 table/extention에서 bbox 비율로 축을 추정하면
+//    fix와 반대로 뒤집혀서 고정축 사용)
+// - hinge_bracket(테이블 접합부)이 있는 쪽 = 뒷면
 function detectOrientation(scene: THREE.Object3D, worldBox: THREE.Box3) {
-  const size = new THREE.Vector3();
   const center = new THREE.Vector3();
-  worldBox.getSize(size);
   worldBox.getCenter(center);
 
-  const sideAxis: Axis = size.x >= size.z ? "x" : "z"; // 긴 가로축 (좌우)
-  const frontAxis: Axis = sideAxis === "x" ? "z" : "x"; // 앞뒤 법선축
+  const frontAxis: Axis = "x";
 
-  // 테이블 쪽 찾기
-  let backSign = -1; // 기본: 음의 방향이 뒷면
-  for (const marker of ["Tabler_table", "hinge_bracket"]) {
+  let backSign = 1; // 기본: fix 기준 +X가 뒷면 (힌지 쪽)
+  for (const marker of ["hinge_bracket", "Tabler_table"]) {
     const markerBox = new THREE.Box3();
     let found = false;
     scene.traverse((o) => {
