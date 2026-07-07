@@ -546,6 +546,20 @@ export default function TumblerEditor() {
     scheduleSave();
   };
 
+  // 로고 전체 초기화: 적용 해제 + 업로드/미리보기 제거 + 위치·크기·회전 기본값
+  const resetLogo = () => {
+    clearImageFrom([...imageTargetsRef.current]);
+    imageTargetsRef.current.clear();
+    imgRef.current = null;
+    dataUrlRef.current = null;
+    imageLoadedRef.current = false;
+    setImageLoaded(false);
+    setImageApplied(false);
+    setCompose({ x: 0.5, y: 0.5, scale: 0.4, rotation: 0 });
+    drawComposite();
+    scheduleSave();
+  };
+
   // ----- model load → state restore -----
   const restoreState = useCallback((): boolean => {
     let st: SavedState | null = null;
@@ -1220,6 +1234,13 @@ export default function TumblerEditor() {
             >
               {t("이미지 제거", "Remove image")}
             </button>
+            <button
+              onClick={resetLogo}
+              disabled={!imageLoaded && !imageApplied}
+              className="rounded-lg border border-slate-200 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("로고 적용 초기화", "Reset logo")}
+            </button>
             <p className="text-xs leading-relaxed text-slate-400">
               {t(
                 "적용 면(앞/뒤/좌/우/위/아래)을 고르고 적용하면 그 방향 면에만 입혀짐. 미리보기 드래그 = 이동, 휠 = 크기. 적용 후에도 실시간 수정 가능.",
@@ -1425,7 +1446,7 @@ export default function TumblerEditor() {
           <button
             onClick={exportPdf}
             disabled={exporting || !modelUrl}
-            className="mt-auto rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-auto hidden rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {exporting
               ? t("PDF 생성 중...", "Generating PDF...")
