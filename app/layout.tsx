@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
 import HeaderNav from "@/components/HeaderNav";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "테블러 | 커스텀 텀블러 3D 목업 스튜디오",
@@ -20,9 +21,7 @@ export default function RootLayout({
         <LanguageProvider>
           <HeaderNav />
           <main>{children}</main>
-          <footer className="border-t border-zinc-200 py-8 text-center text-sm text-zinc-400">
-            © {new Date().getFullYear()} TABLER. All rights reserved.
-          </footer>
+          <Footer />
         </LanguageProvider>
       </body>
     </html>

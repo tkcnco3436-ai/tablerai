@@ -18,6 +18,13 @@ const SWATCHES = [
   "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899",
   "#ffffff", "#d1d5db", "#6b7280", "#1f2937", "#78350f", "#0c4a6e",
 ];
+// 모델 파일명 → 탭 라벨 (드롭다운 대체)
+const MODEL_LABELS: Record<string, { label: string; labelEn: string }> = {
+  "tabler(table).glb": { label: "테이블 설치 형태", labelEn: "Table-mounted" },
+  "tabler(fix).glb": { label: "기본 형태", labelEn: "Basic" },
+  "tabler(extention).glb": { label: "테이블 연장 형태", labelEn: "Table-extended" },
+};
+const SAMPLE_LOGOS = [1, 2, 3, 4, 5].map((n) => `/img/sample_logo${n}.png`);
 const TEX_SIZE = 1024;
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
@@ -78,6 +85,8 @@ const DEFAULT_SURFACE: Surface = {
   envIntensity: 0.6,
 };
 const SURFACE_KEY = "tabler-editor:surface:v2";
+const BG_KEY = "tabler-editor:bg:v1";
+const BG_PRESETS = ["#fafafa", "#ffffff", "#e5e7eb", "#111827", "#000000", "#ecfdf5"];
 const TEX_MAPS: { key: TexMapKey; label: string; labelEn: string; url: string | null }[] = [
   { key: "none", label: "없음", labelEn: "None", url: null },
   { key: "grain", label: "미세 입자", labelEn: "Fine grain", url: "/img/txmap2.jpg" },
@@ -328,12 +337,14 @@ export default function TumblerEditor() {
   const [models, setModels] = useState<string[]>([]);
   const [modelUrl, setModelUrlState] = useState("");
   const [ready, setReady] = useState(false);
-  const [target, setTargetState] = useState("all");
+  const [target, setTargetState] = useState("front");
   const [tab, setTab] = useState<"color" | "image" | "light" | "surface">("color");
   const [lights, setLights] = useState(DEFAULT_LIGHTS);
   const [surface, setSurface] = useState<Surface>(DEFAULT_SURFACE);
   const surfaceRef = useRef<Surface>(DEFAULT_SURFACE);
   const [hex, setHexState] = useState("#3b82f6");
+  const [bgColor, setBgColorState] = useState("#fafafa");
+  const bgColorRef = useRef("#fafafa");
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageApplied, setImageApplied] = useState(false);
   const [compose, setComposeState] = useState<Compose>({ x: 0.5, y: 0.5, scale: 0.4, rotation: 0 });
@@ -352,7 +363,7 @@ export default function TumblerEditor() {
   const hexRef = useRef(hex);
   const composeRef = useRef(compose);
   const imageLoadedRef = useRef(false);
-  const targetRef = useRef(target);
+  const targetRef = useRef("front");
   const modelUrlRef = useRef(modelUrl);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -386,7 +397,7 @@ export default function TumblerEditor() {
     setTargetState(key);
     const keys = key === "all" ? DIRS.map((d) => d.key) : [key];
     const mats = keys.flatMap((k) => materialsFor(k));
-    mats.forEach((m) => m.emissive?.set("#10b981"));
+    mats.forEach((m) => m.emissive?.set("#3b82f6"));
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     flashTimerRef.current = setTimeout(() => {
       mats.forEach((m) => m.emissive?.set("#000000"));
@@ -492,6 +503,21 @@ export default function TumblerEditor() {
       img.src = url;
     };
     reader.readAsDataURL(file);
+  };
+
+  // 예시 로고 (public 경로) 로드 — 업로드와 동일 플로우
+  const loadLogoUrl = (url: string) => {
+    dataUrlRef.current = url;
+    const img = imgRef.current ?? new Image();
+    imgRef.current = img;
+    img.onload = () => {
+      imageLoadedRef.current = true;
+      setImageLoaded(true);
+      drawComposite();
+      if (imageTargetsRef.current.size) bake();
+      scheduleSave();
+    };
+    img.src = url;
   };
 
   const clearImageFrom = (keys: string[]) => {
@@ -665,6 +691,25 @@ export default function TumblerEditor() {
     } catch {}
   }, []);
 
+  // ----- background color -----
+  const setBgColor = (v: string) => {
+    setBgColorState(v);
+    if (!HEX_RE.test(v)) return;
+    bgColorRef.current = v;
+    try {
+      localStorage.setItem(BG_KEY, v);
+    } catch {}
+  };
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(BG_KEY);
+      if (saved && HEX_RE.test(saved)) {
+        bgColorRef.current = saved;
+        setBgColorState(saved);
+      }
+    } catch {}
+  }, []);
+
   // ----- effects -----
   useEffect(() => {
     fetch("/models/models.json")
@@ -733,7 +778,7 @@ export default function TumblerEditor() {
       ctx.fillRect(0, 0, W, H);
 
       // header
-      ctx.fillStyle = "#10b981";
+      ctx.fillStyle = "#3b82f6";
       ctx.font = F(26, 700);
       ctx.fillText(t("테블러 TABLER STUDIO", "TABLER STUDIO"), 80, 96);
       ctx.fillStyle = "#0f172a";
@@ -759,7 +804,7 @@ export default function TumblerEditor() {
 
       // 3D snapshot
       const boxX = 80, boxY = 250, boxW = W - 160, boxH = 660;
-      ctx.fillStyle = "#f1f5f9";
+      ctx.fillStyle = HEX_RE.test(bgColorRef.current) ? bgColorRef.current : "#f1f5f9";
       ctx.fillRect(boxX, boxY, boxW, boxH);
       const img = new Image();
       await new Promise<void>((res, rej) => {
@@ -861,22 +906,54 @@ export default function TumblerEditor() {
   const targetBtn = (sel: boolean) =>
     `rounded-lg border px-3 py-2 text-center text-[13px] transition ${
       sel
-        ? "border-emerald-500 bg-emerald-50 font-semibold text-emerald-700"
-        : "border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+        ? "border-blue-500 bg-blue-50 font-semibold text-blue-700"
+        : "border-slate-200 text-slate-600 hover:bg-slate-50"
     }`;
   const tabBtn = (sel: boolean) =>
-    `flex-1 border-b-2 pb-2.5 text-center text-sm transition ${
+    `border-b-2 px-1 pb-2.5 text-center text-sm transition ${
       sel
-        ? "border-emerald-500 font-semibold text-emerald-600"
-        : "border-transparent text-zinc-500 hover:text-zinc-700"
+        ? "border-blue-500 font-semibold text-blue-600"
+        : "border-transparent text-slate-500 hover:text-slate-700"
     }`;
-  const label = "mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400";
+  const label = "mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400";
+  const modelLabel = (file: string): string => {
+    const m = MODEL_LABELS[file];
+    return m ? t(m.label, m.labelEn) : file.replace(/\.(glb|gltf)$/i, "");
+  };
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
-      <div className="grid gap-6 lg:grid-cols-5">
-        {/* ===== 3D viewer ===== */}
-        <div className="relative h-[380px] overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 lg:col-span-3 lg:h-[640px]">
+    <section>
+      {/* ===== 3D viewer (full width) + model tabs ===== */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div
+          className="relative h-[440px] overflow-hidden rounded-xl border border-slate-200 sm:h-[600px] lg:h-[720px]"
+          style={{ background: HEX_RE.test(bgColor) ? bgColor : "#fafafa" }}
+        >
+          {/* model tabs — top-left */}
+          <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
+            {models.length === 0 && (
+              <span className="rounded-full border border-slate-200 bg-white/85 px-4 py-2 text-[13px] text-slate-400 backdrop-blur">
+                {t("models 폴더에 .glb 없음", "No .glb in models folder")}
+              </span>
+            )}
+            {models.map((f) => {
+              const url = "/models/" + f;
+              const sel = modelUrl === url;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setModelUrl(url)}
+                  className={`rounded-full border px-4 py-2 text-[13px] font-medium shadow-sm backdrop-blur transition ${
+                    sel
+                      ? "border-blue-500 bg-blue-500 text-white"
+                      : "border-slate-200 bg-white/85 text-slate-700 hover:bg-white"
+                  }`}
+                >
+                  {modelLabel(f)}
+                </button>
+              );
+            })}
+          </div>
           {modelUrl ? (
             <Canvas
               camera={{ position: [2.2, 1.6, 2.6], fov: 45 }}
@@ -910,66 +987,47 @@ export default function TumblerEditor() {
               <OrbitControls makeDefault enableDamping />
             </Canvas>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-zinc-400">
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">
               {t("3D 모델 로딩 중...", "Loading 3D model...")}
             </div>
           )}
-          <div className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-white/80 px-2.5 py-1 text-xs text-zinc-500 backdrop-blur">
+          <div className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-white/80 px-2.5 py-1 text-xs text-slate-500 backdrop-blur">
             {t(
               "드래그 회전 · 휠 줌 · 면 선택 시 초록색으로 표시",
               "Drag to rotate · scroll to zoom · selected faces flash green"
             )}
           </div>
         </div>
+      </div>
 
-        {/* ===== side panel ===== */}
-        <div className="flex flex-col gap-5 lg:col-span-2">
-          {/* model select */}
-          <div>
-            <label className={label} htmlFor="model-select">{t("3D 모델", "3D Model")}</label>
-            <select
-              id="model-select"
-              value={modelUrl}
-              onChange={(e) => setModelUrl(e.target.value)}
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 outline-none focus:border-emerald-500"
-            >
-              {models.length === 0 && (
-                <option value="">{t("models 폴더에 .glb 없음", "No .glb in models folder")}</option>
-              )}
-              {models.map((f) => (
-                <option key={f} value={"/models/" + f}>
-                  {f.replace(/\.(glb|gltf)$/i, "")}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* ===== color / logo editing (below viewer) ===== */}
+      <div className="mt-6 flex flex-col gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        {/* tabs */}
+        <div className="flex gap-6 border-b border-slate-200">
+          <button onClick={() => setTab("color")} className={tabBtn(tab === "color")}>
+            {t("나의 컬러 찾기", "My color")}
+          </button>
+          <button onClick={() => setTab("image")} className={tabBtn(tab === "image")}>
+            {t("나의 로고 적용", "My logo")}
+          </button>
+          <button onClick={() => setTab("light")} className={tabBtn(tab === "light")}>
+            {t("조명", "Light")}
+          </button>
+          <button onClick={() => setTab("surface")} className={tabBtn(tab === "surface")}>
+            {t("질감", "Surface")}
+          </button>
+        </div>
 
-          {/* tabs */}
-          <div className="flex border-b border-zinc-200">
-            <button onClick={() => setTab("color")} className={tabBtn(tab === "color")}>
-              {t("컬러", "Color")}
-            </button>
-            <button onClick={() => setTab("image")} className={tabBtn(tab === "image")}>
-              {t("이미지", "Image")}
-            </button>
-            <button onClick={() => setTab("light")} className={tabBtn(tab === "light")}>
-              {t("조명", "Light")}
-            </button>
-            <button onClick={() => setTab("surface")} className={tabBtn(tab === "surface")}>
-              {t("질감", "Surface")}
-            </button>
-          </div>
-
-          {/* color panel */}
-          <div className={tab === "color" ? "flex flex-col gap-4" : "hidden"}>
-            <div>
+        {/* color panel */}
+        <div className={tab === "color" ? "flex flex-col gap-5" : "hidden"}>
+            <div className="max-w-md">
               <span className={label}>{t("색상 선택", "Pick a color")}</span>
               <div className="flex items-center gap-2.5">
                 <input
                   type="color"
                   value={HEX_RE.test(hex) ? hex : hexRef.current}
                   onChange={(e) => applyColor(e.target.value)}
-                  className="h-10 w-12 cursor-pointer rounded-lg border border-zinc-200 bg-white p-1"
+                  className="h-10 w-12 cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
                 />
                 <input
                   type="text"
@@ -981,13 +1039,13 @@ export default function TumblerEditor() {
                     if (v && !v.startsWith("#")) v = "#" + v;
                     applyColor(v);
                   }}
-                  className="min-w-0 flex-1 rounded-lg border border-zinc-200 px-3 py-2 font-mono text-sm text-zinc-700 outline-none focus:border-emerald-500"
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm text-slate-700 outline-none focus:border-blue-500"
                 />
               </div>
             </div>
             <div>
               <span className={label}>{t("프리셋", "Presets")}</span>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid max-w-2xl grid-cols-6 gap-2 sm:grid-cols-12">
                 {SWATCHES.map((c) => (
                   <button
                     key={c}
@@ -995,7 +1053,7 @@ export default function TumblerEditor() {
                     style={{ background: c }}
                     aria-label={c}
                     className={`aspect-square rounded-lg border-2 transition hover:scale-110 ${
-                      hexRef.current.toLowerCase() === c ? "border-emerald-500" : "border-zinc-200"
+                      hexRef.current.toLowerCase() === c ? "border-blue-500" : "border-slate-200"
                     }`}
                   />
                 ))}
@@ -1004,24 +1062,21 @@ export default function TumblerEditor() {
           </div>
 
           {/* image panel (canvas는 항상 마운트 유지 — 텍스처 원본) */}
-          <div className={tab === "image" ? "flex flex-col gap-3" : "hidden"}>
+          <div className={tab === "image" ? "grid gap-5 lg:grid-cols-3" : "hidden"}>
+            {/* col 1: 적용 면 + 업로드 */}
+            <div className="flex flex-col gap-3">
             {/* 이미지 적용 면 (방향 기준 6면) */}
             <div>
               <span className={label}>
                 {t("이미지 적용 면", "Apply image to face")}{" "}
-                <span className="normal-case text-zinc-300">
+                <span className="normal-case text-slate-300">
                   {t("— 선택 시 3D에서 초록 표시", "— selected face flashes green in 3D")}
                 </span>
               </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  onClick={() => selectTarget("all")}
-                  className={`${targetBtn(target === "all")} col-span-2`}
-                  disabled={!ready}
-                >
-                  {t("전체", "All")}
-                </button>
-                {DIRS.map((d) => (
+              <div className="grid grid-cols-3 gap-1.5">
+                {DIRS.filter(
+                  (d) => d.key === "front" || d.key === "back" || d.key === "top"
+                ).map((d) => (
                   <button
                     key={d.key}
                     onClick={() => selectTarget(d.key)}
@@ -1031,6 +1086,37 @@ export default function TumblerEditor() {
                     {t(d.label, d.labelEn)}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* 예시 로고 — 클릭 시 바로 로드 */}
+            <div>
+              <span className={label}>
+                {t("예시 로고", "Sample logos")}{" "}
+                <span className="normal-case text-slate-300">
+                  {t("— 클릭해서 테스트", "— click to test")}
+                </span>
+              </span>
+              <div className="grid grid-cols-5 gap-1.5">
+                {SAMPLE_LOGOS.map((url) => {
+                  const sel = dataUrlRef.current === url;
+                  return (
+                    <button
+                      key={url}
+                      onClick={() => loadLogoUrl(url)}
+                      className={`flex h-12 items-center justify-center rounded-lg border-2 bg-white p-1 transition hover:border-blue-400 ${
+                        sel ? "border-blue-500" : "border-slate-200"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt=""
+                        className="h-full w-full object-contain"
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1048,8 +1134,8 @@ export default function TumblerEditor() {
               }}
               className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center text-[13px] transition ${
                 dragover
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-600"
-                  : "border-zinc-300 text-zinc-400 hover:border-emerald-400 hover:text-emerald-500"
+                  ? "border-blue-500 bg-blue-50 text-blue-600"
+                  : "border-slate-300 text-slate-400 hover:border-blue-400 hover:text-blue-500"
               }`}
             >
               {t("클릭 또는 드래그로", "Click or drag & drop")}
@@ -1063,7 +1149,10 @@ export default function TumblerEditor() {
               hidden
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
+            </div>
 
+            {/* col 2: 미리보기 캔버스 */}
+            <div className="flex items-start">
             <canvas
               ref={composeCanvasRef}
               width={TEX_SIZE}
@@ -1080,9 +1169,12 @@ export default function TumblerEditor() {
               onPointerUp={() => {
                 draggingRef.current = false;
               }}
-              className="w-full cursor-grab touch-none rounded-xl border border-zinc-200 active:cursor-grabbing"
+              className="w-full cursor-grab touch-none rounded-xl border border-slate-200 active:cursor-grabbing"
             />
+            </div>
 
+            {/* col 3: 조정 슬라이더 + 적용 버튼 */}
+            <div className="flex flex-col gap-2.5">
             {imageLoaded && (
               <div className="flex flex-col gap-2.5">
                 {(
@@ -1094,9 +1186,9 @@ export default function TumblerEditor() {
                   ] as const
                 ).map(([name, val, min, max, unit, set]) => (
                   <div key={name}>
-                    <div className="mb-1 flex justify-between text-[13px] text-zinc-600">
+                    <div className="mb-1 flex justify-between text-[13px] text-slate-600">
                       <span>{name}</span>
-                      <span className="font-mono text-xs text-zinc-400">
+                      <span className="font-mono text-xs text-slate-400">
                         {val}
                         {unit}
                       </span>
@@ -1107,7 +1199,7 @@ export default function TumblerEditor() {
                       max={max}
                       value={val}
                       onChange={(e) => set(Number(e.target.value))}
-                      className="w-full cursor-pointer accent-emerald-500"
+                      className="w-full cursor-pointer accent-blue-500"
                     />
                   </div>
                 ))}
@@ -1117,31 +1209,70 @@ export default function TumblerEditor() {
             <button
               onClick={applyImage}
               disabled={!imageLoaded}
-              className="rounded-lg bg-emerald-500 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg bg-blue-500 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t("모델에 적용", "Apply to model")}
             </button>
             <button
               onClick={removeImage}
               disabled={!imageApplied}
-              className="rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {t("이미지 제거", "Remove image")}
             </button>
-            <p className="text-xs leading-relaxed text-zinc-400">
+            <p className="text-xs leading-relaxed text-slate-400">
               {t(
                 "적용 면(앞/뒤/좌/우/위/아래)을 고르고 적용하면 그 방향 면에만 입혀짐. 미리보기 드래그 = 이동, 휠 = 크기. 적용 후에도 실시간 수정 가능.",
                 "Pick a face (front/back/left/right/top/bottom) and apply — the image goes on that face only. Drag the preview to move, scroll to resize. Live-editable after applying."
               )}
             </p>
+            </div>
           </div>
 
           {/* light panel — 3점 조명 */}
-          <div className={tab === "light" ? "flex flex-col gap-3" : "hidden"}>
+          <div className={tab === "light" ? "flex max-w-2xl flex-col gap-3" : "hidden"}>
+            {/* 배경 색상 */}
+            <div className="rounded-xl border border-slate-200 p-3">
+              <span className={label}>{t("배경 색상", "Background color")}</span>
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="color"
+                  value={HEX_RE.test(bgColor) ? bgColor : bgColorRef.current}
+                  onChange={(e) => setBgColor(e.target.value)}
+                  className="h-10 w-12 cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
+                />
+                <input
+                  type="text"
+                  value={bgColor}
+                  maxLength={7}
+                  placeholder="#000000"
+                  onChange={(e) => {
+                    let v = e.target.value.trim();
+                    if (v && !v.startsWith("#")) v = "#" + v;
+                    setBgColor(v);
+                  }}
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm text-slate-700 outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="mt-2 grid grid-cols-6 gap-2">
+                {BG_PRESETS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setBgColor(c)}
+                    style={{ background: c }}
+                    aria-label={c}
+                    className={`aspect-square rounded-lg border-2 transition hover:scale-110 ${
+                      bgColorRef.current.toLowerCase() === c ? "border-blue-500" : "border-slate-200"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
             <div>
-              <div className="mb-1 flex justify-between text-[13px] text-zinc-600">
+              <div className="mb-1 flex justify-between text-[13px] text-slate-600">
                 <span>{t("환경광 (전체 밝기)", "Ambient (overall brightness)")}</span>
-                <span className="font-mono text-xs text-zinc-400">
+                <span className="font-mono text-xs text-slate-400">
                   {Math.round(lights.ambient * 100)}%
                 </span>
               </div>
@@ -1151,7 +1282,7 @@ export default function TumblerEditor() {
                 max={200}
                 value={Math.round(lights.ambient * 100)}
                 onChange={(e) => updateLights({ ambient: Number(e.target.value) / 100 })}
-                className="w-full cursor-pointer accent-emerald-500"
+                className="w-full cursor-pointer accent-blue-500"
               />
             </div>
 
@@ -1159,14 +1290,14 @@ export default function TumblerEditor() {
               const cfg = lights[lk];
               const name_ = t(lname, lnameEn);
               return (
-                <div key={lk} className="rounded-xl border border-zinc-200 p-3">
+                <div key={lk} className="rounded-xl border border-slate-200 p-3">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[13px] font-semibold text-zinc-700">{name_}</span>
+                    <span className="text-[13px] font-semibold text-slate-700">{name_}</span>
                     <input
                       type="color"
                       value={cfg.color}
                       onChange={(e) => updateLight(lk, { color: e.target.value })}
-                      className="h-7 w-9 cursor-pointer rounded-md border border-zinc-200 bg-white p-0.5"
+                      className="h-7 w-9 cursor-pointer rounded-md border border-slate-200 bg-white p-0.5"
                       aria-label={t(`${name_} 색상`, `${name_} color`)}
                     />
                   </div>
@@ -1178,9 +1309,9 @@ export default function TumblerEditor() {
                     ] as const
                   ).map(([name, val, min, max, unit, set]) => (
                     <div key={name} className="mb-1.5 last:mb-0">
-                      <div className="mb-0.5 flex justify-between text-xs text-zinc-500">
+                      <div className="mb-0.5 flex justify-between text-xs text-slate-500">
                         <span>{name}</span>
-                        <span className="font-mono text-[11px] text-zinc-400">
+                        <span className="font-mono text-[11px] text-slate-400">
                           {val}
                           {unit}
                         </span>
@@ -1192,7 +1323,7 @@ export default function TumblerEditor() {
                         step={unit === "" ? 0.5 : 1}
                         value={val}
                         onChange={(e) => set(Number(e.target.value))}
-                        className="w-full cursor-pointer accent-emerald-500"
+                        className="w-full cursor-pointer accent-blue-500"
                       />
                     </div>
                   ))}
@@ -1202,11 +1333,11 @@ export default function TumblerEditor() {
 
             <button
               onClick={() => updateLights(DEFAULT_LIGHTS)}
-              className="rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-200"
+              className="rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-200"
             >
               {t("기본값으로 초기화", "Reset to defaults")}
             </button>
-            <p className="text-xs leading-relaxed text-zinc-400">
+            <p className="text-xs leading-relaxed text-slate-400">
               {t(
                 "키 = 주광, 필 = 그림자 완화용 보조광, 백 = 윤곽 살리는 역광. 설정은 자동 저장되고 PDF 스냅샷에도 반영됨.",
                 "Key = main light, fill = softens shadows, back = rim light for silhouette. Settings auto-save and apply to PDF snapshots."
@@ -1215,7 +1346,7 @@ export default function TumblerEditor() {
           </div>
 
           {/* surface panel — 질감 */}
-          <div className={tab === "surface" ? "flex flex-col gap-3" : "hidden"}>
+          <div className={tab === "surface" ? "flex max-w-2xl flex-col gap-3" : "hidden"}>
             <div>
               <span className={label}>{t("프리셋", "Presets")}</span>
               <div className="grid grid-cols-2 gap-1.5">
@@ -1260,9 +1391,9 @@ export default function TumblerEditor() {
               ] as const
             ).map(([name, val, hint, set]) => (
               <div key={name}>
-                <div className="mb-1 flex justify-between text-[13px] text-zinc-600">
+                <div className="mb-1 flex justify-between text-[13px] text-slate-600">
                   <span>{name}</span>
-                  <span className="font-mono text-xs text-zinc-400">{val}%</span>
+                  <span className="font-mono text-xs text-slate-400">{val}%</span>
                 </div>
                 <input
                   type="range"
@@ -1270,19 +1401,19 @@ export default function TumblerEditor() {
                   max={100}
                   value={val}
                   onChange={(e) => set(Number(e.target.value))}
-                  className="w-full cursor-pointer accent-emerald-500"
+                  className="w-full cursor-pointer accent-blue-500"
                 />
-                <div className="mt-0.5 text-[11px] text-zinc-300">{hint}</div>
+                <div className="mt-0.5 text-[11px] text-slate-300">{hint}</div>
               </div>
             ))}
 
             <button
               onClick={() => updateSurface(DEFAULT_SURFACE)}
-              className="rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-200"
+              className="rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-200"
             >
               {t("기본값으로 초기화 (무광 플라스틱)", "Reset to default (matte plastic)")}
             </button>
-            <p className="text-xs leading-relaxed text-zinc-400">
+            <p className="text-xs leading-relaxed text-slate-400">
               {t(
                 "모델 전체에 적용됨. 설정은 자동 저장되고 PDF 스냅샷에도 반영됨.",
                 "Applies to the whole model. Settings auto-save and apply to PDF snapshots."
@@ -1294,14 +1425,13 @@ export default function TumblerEditor() {
           <button
             onClick={exportPdf}
             disabled={exporting || !modelUrl}
-            className="mt-auto rounded-xl bg-zinc-900 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-auto rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {exporting
               ? t("PDF 생성 중...", "Generating PDF...")
               : t("📄 PDF로 내보내기", "📄 Export as PDF")}
           </button>
         </div>
-      </div>
     </section>
   );
 }

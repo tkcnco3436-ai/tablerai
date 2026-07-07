@@ -19,8 +19,8 @@ function AugPanel({
 }) {
   return (
     <div
-      className={`relative border border-[#00ff9c]/30 bg-[#00ff9c]/[0.03] backdrop-blur-sm ${
-        glow ? "shadow-[0_0_24px_rgba(0,255,156,0.15)]" : ""
+      className={`relative border border-[#3b82f6]/30 bg-[#3b82f6]/[0.03] backdrop-blur-sm ${
+        glow ? "shadow-[0_0_24px_rgba(59,130,246,0.15)]" : ""
       } ${className}`}
       style={{
         clipPath:
@@ -28,8 +28,8 @@ function AugPanel({
       }}
     >
       {/* 코너 브래킷 */}
-      <span className="pointer-events-none absolute right-0 top-0 h-4 w-4 border-r-2 border-t-2 border-[#00ff9c]/70" />
-      <span className="pointer-events-none absolute bottom-4 left-0 h-4 w-[2px] bg-[#00ff9c]/70" />
+      <span className="pointer-events-none absolute right-0 top-0 h-4 w-4 border-r-2 border-t-2 border-[#3b82f6]/70" />
+      <span className="pointer-events-none absolute bottom-4 left-0 h-4 w-[2px] bg-[#3b82f6]/70" />
       {children}
     </div>
   );
@@ -53,7 +53,7 @@ function TypeLine({ text, delay = 0 }: { text: string; delay?: number }) {
   return (
     <span>
       {shown}
-      <span className="animate-pulse text-[#00ff9c]">▌</span>
+      <span className="animate-pulse text-[#3b82f6]">▌</span>
     </span>
   );
 }
@@ -61,14 +61,14 @@ function TypeLine({ text, delay = 0 }: { text: string; delay?: number }) {
 /* ───────────────────────── 터미널 로그 (image63 우측 코드 패널) ───────────────────────── */
 
 const LOG_LINES = [
-  { tag: "LOAD", text: "tabler(table).glb … OK", color: "text-[#00ff9c]" },
-  { tag: "LOAD", text: "tabler(fix).glb … OK", color: "text-[#00ff9c]" },
-  { tag: "LOAD", text: "tabler(extention).glb … OK", color: "text-[#00ff9c]" },
+  { tag: "LOAD", text: "tabler(table).glb … OK", color: "text-[#3b82f6]" },
+  { tag: "LOAD", text: "tabler(fix).glb … OK", color: "text-[#3b82f6]" },
+  { tag: "LOAD", text: "tabler(extention).glb … OK", color: "text-[#3b82f6]" },
   { tag: "MAT", text: "baseColorFactor → #00FF9C", color: "text-cyan-300" },
   { tag: "UV", text: "decal compose 1024×1024 baked", color: "text-cyan-300" },
-  { tag: "CAM", text: "orbit 360° free — drag enabled", color: "text-[#00ff9c]" },
+  { tag: "CAM", text: "orbit 360° free — drag enabled", color: "text-[#3b82f6]" },
   { tag: "PDF", text: "proposal renderer standby", color: "text-amber-300" },
-  { tag: "SYS", text: "ALL SYSTEMS NOMINAL", color: "text-[#00ff9c]" },
+  { tag: "SYS", text: "ALL SYSTEMS NOMINAL", color: "text-[#3b82f6]" },
 ];
 
 function TerminalLog() {
@@ -83,10 +83,10 @@ function TerminalLog() {
     <div className="space-y-1.5 font-mono text-[11px] leading-relaxed">
       {LOG_LINES.slice(0, count).map((l, i) => (
         <div key={i} className="flex gap-2">
-          <span className="shrink-0 text-[#00ff9c]/50">
+          <span className="shrink-0 text-[#3b82f6]/50">
             {String(i + 1).padStart(2, "0")}
           </span>
-          <span className="shrink-0 rounded-sm bg-[#00ff9c]/10 px-1 text-[#00ff9c]/80">
+          <span className="shrink-0 rounded-sm bg-[#3b82f6]/10 px-1 text-[#3b82f6]/80">
             {l.tag}
           </span>
           <span className={l.color}>{l.text}</span>
@@ -111,7 +111,7 @@ function Reticle() {
           cy="100"
           r="96"
           fill="none"
-          stroke="#00ff9c"
+          stroke="#3b82f6"
           strokeOpacity="0.4"
           strokeWidth="1"
           strokeDasharray="2 6"
@@ -126,7 +126,7 @@ function Reticle() {
           cy="100"
           r="84"
           fill="none"
-          stroke="#00ff9c"
+          stroke="#3b82f6"
           strokeOpacity="0.25"
           strokeWidth="6"
           strokeDasharray="40 80"
@@ -139,23 +139,25 @@ function Reticle() {
           cy="100"
           r="70"
           fill="none"
-          stroke="#00ff9c"
+          stroke="#3b82f6"
           strokeOpacity="0.5"
           strokeWidth="0.8"
         />
-        <circle cx="100" cy="100" r="58" fill="rgba(0,255,156,0.05)" />
+        <circle cx="100" cy="100" r="58" fill="rgba(59,130,246,0.05)" />
         {Array.from({ length: 36 }).map((_, i) => {
           const a = (i / 36) * Math.PI * 2;
           const r1 = 74;
           const r2 = i % 9 === 0 ? 80 : 77;
+          // SSR/CSR 부동소수점 말단 비트 차이로 인한 하이드레이션 미스매치 방지: 좌표 고정 반올림
+          const round = (n: number) => Math.round(n * 1000) / 1000;
           return (
             <line
               key={i}
-              x1={100 + r1 * Math.cos(a)}
-              y1={100 + r1 * Math.sin(a)}
-              x2={100 + r2 * Math.cos(a)}
-              y2={100 + r2 * Math.sin(a)}
-              stroke="#00ff9c"
+              x1={round(100 + r1 * Math.cos(a))}
+              y1={round(100 + r1 * Math.sin(a))}
+              x2={round(100 + r2 * Math.cos(a))}
+              y2={round(100 + r2 * Math.sin(a))}
+              stroke="#3b82f6"
               strokeOpacity="0.6"
               strokeWidth="0.8"
             />
@@ -164,12 +166,12 @@ function Reticle() {
       </svg>
       {/* 중앙 제품 이미지 */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative h-[46%] w-[46%] overflow-hidden rounded-full border border-[#00ff9c]/40 bg-[#020c08] shadow-[0_0_40px_rgba(0,255,156,0.25)]">
+        <div className="relative h-[46%] w-[46%] overflow-hidden rounded-full border border-[#3b82f6]/40 bg-[#060d1a] shadow-[0_0_40px_rgba(59,130,246,0.25)]">
           <Image
-            src="/img/tabler.png"
-            alt="테블러 텀블러"
+            src="/img/Group 3.png"
+            alt="테블러 로고"
             fill
-            className="object-contain p-3"
+            className="object-contain p-6"
           />
         </div>
       </div>
@@ -227,13 +229,13 @@ export default function Main2() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020c08] text-[#d8ffe9]">
+    <div className="relative min-h-screen overflow-hidden bg-[#060d1a] text-[#dbe9ff]">
       {/* 배경 그리드 + 스캔라인 + 비네트 */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.13]"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(0,255,156,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,156,.5) 1px, transparent 1px)",
+            "linear-gradient(rgba(59,130,246,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,.5) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
         }}
       />
@@ -241,12 +243,12 @@ export default function Main2() {
         className="pointer-events-none absolute inset-0 opacity-[0.07]"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,255,156,.6) 2px 3px)",
+            "repeating-linear-gradient(0deg, transparent 0 2px, rgba(59,130,246,.6) 2px 3px)",
         }}
       />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,#020c08_95%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,#060d1a_95%)]" />
 
-      <div className="relative mx-auto max-w-6xl px-4 py-10">
+      <div className="relative w-full px-6 py-10 sm:px-10 lg:px-16">
         {/* ── 상단 상태 바 ── */}
         <motion.div
           variants={fadeUp}
@@ -257,15 +259,15 @@ export default function Main2() {
           <AugPanel className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 font-mono text-[11px] tracking-widest">
             <div className="flex items-center gap-3">
               <span className="relative flex h-2 w-2">
-                <span className="absolute h-full w-full animate-ping rounded-full bg-[#00ff9c]/60" />
-                <span className="h-2 w-2 rounded-full bg-[#00ff9c]" />
+                <span className="absolute h-full w-full animate-ping rounded-full bg-[#3b82f6]/60" />
+                <span className="h-2 w-2 rounded-full bg-[#3b82f6]" />
               </span>
-              <span className="text-[#00ff9c]">SYSTEM ONLINE</span>
-              <span className="text-[#00ff9c]/40">TBLR-OS v2.0</span>
+              <span className="text-[#3b82f6]">SYSTEM ONLINE</span>
+              <span className="text-[#3b82f6]/40">TBLR-OS v2.0</span>
             </div>
-            <div className="flex items-center gap-4 text-[#00ff9c]/60">
+            <div className="flex items-center gap-4 text-[#3b82f6]/60">
               <span>VOICE OUTPUT : STREAMING</span>
-              <span className="text-[#00ff9c]">{clock}</span>
+              <span className="text-[#3b82f6]">{clock}</span>
             </div>
           </AugPanel>
         </motion.div>
@@ -282,19 +284,19 @@ export default function Main2() {
           >
             {STATUS_ITEMS.map((s) => (
               <AugPanel key={s.k} className="px-4 py-3">
-                <div className="font-mono text-[10px] tracking-[0.3em] text-[#00ff9c]/50">
+                <div className="font-mono text-[10px] tracking-[0.3em] text-[#3b82f6]/50">
                   {s.k}
                 </div>
-                <div className="mt-1 font-mono text-lg text-[#00ff9c]">
+                <div className="mt-1 font-mono text-lg text-[#3b82f6]">
                   {s.v}
                 </div>
               </AugPanel>
             ))}
             <AugPanel className="px-4 py-3">
-              <div className="font-mono text-[10px] tracking-[0.3em] text-[#00ff9c]/50">
+              <div className="font-mono text-[10px] tracking-[0.3em] text-[#3b82f6]/50">
                 USER INPUT
               </div>
-              <p className="mt-2 text-[13px] leading-relaxed text-[#d8ffe9]/80">
+              <p className="mt-2 text-[13px] leading-relaxed text-[#dbe9ff]/80">
                 {t(
                   "컬러를 고르고, 로고를 끌어다 놓고, 360°로 돌려서 확인하세요. 완성된 시안은 그대로 제안서가 됩니다.",
                   "Pick a color, drag your logo into place, and spin it 360°. The finished proof becomes your proposal."
@@ -311,19 +313,19 @@ export default function Main2() {
             animate="show"
             className="order-1 text-center lg:order-2"
           >
-            <div className="font-mono text-[11px] tracking-[0.5em] text-[#00ff9c]/60">
+            <div className="font-mono text-[11px] tracking-[0.5em] text-[#3b82f6]/60">
               WHISPERFLOW STATUS
             </div>
-            <h1 className="mt-2 font-mono text-3xl font-bold tracking-[0.2em] text-[#00ff9c] [text-shadow:0_0_18px_rgba(0,255,156,0.6)] sm:text-4xl">
+            <h1 className="mt-2 font-mono text-3xl font-bold tracking-[0.2em] text-[#3b82f6] [text-shadow:0_0_18px_rgba(59,130,246,0.6)] sm:text-4xl">
               SPEAKING
             </h1>
-            <div className="mt-1 font-mono text-[11px] tracking-[0.35em] text-[#00ff9c]/50">
+            <div className="mt-1 font-mono text-[11px] tracking-[0.35em] text-[#3b82f6]/50">
               3D MOCKUP : STREAMING
             </div>
             <div className="mt-8">
               <Reticle />
             </div>
-            <div className="mx-auto mt-8 max-w-sm font-mono text-sm text-[#d8ffe9]/80">
+            <div className="mx-auto mt-8 max-w-sm font-mono text-sm text-[#dbe9ff]/80">
               <TypeLine
                 text={t(
                   "텀블러 3D 목업 시스템 가동 중 — 시안을 실시간으로 확인하세요.",
@@ -343,17 +345,17 @@ export default function Main2() {
             className="order-3 space-y-3"
           >
             <AugPanel glow className="px-4 py-3">
-              <div className="mb-3 flex items-center justify-between border-b border-[#00ff9c]/20 pb-2 font-mono text-[10px] tracking-[0.3em]">
-                <span className="text-[#00ff9c]">CODE ACTIONS</span>
-                <span className="text-[#00ff9c]/40">EDITING</span>
+              <div className="mb-3 flex items-center justify-between border-b border-[#3b82f6]/20 pb-2 font-mono text-[10px] tracking-[0.3em]">
+                <span className="text-[#3b82f6]">CODE ACTIONS</span>
+                <span className="text-[#3b82f6]/40">EDITING</span>
               </div>
               <TerminalLog />
             </AugPanel>
             <AugPanel className="px-4 py-3">
-              <div className="font-mono text-[10px] tracking-[0.3em] text-[#00ff9c]/50">
+              <div className="font-mono text-[10px] tracking-[0.3em] text-[#3b82f6]/50">
                 RIG OUTPUT
               </div>
-              <p className="mt-2 text-[13px] leading-relaxed text-[#d8ffe9]/80">
+              <p className="mt-2 text-[13px] leading-relaxed text-[#dbe9ff]/80">
                 {t(
                   "테이블형 · 고정형 · 확장형 3종 모델 로드 완료. 에디터에서 부위별 컬러와 데칼 위치를 직접 편집할 수 있습니다.",
                   "Table, fixed, and extension models loaded. Edit per-face colors and decal placement directly in the editor."
@@ -373,13 +375,13 @@ export default function Main2() {
         >
           {METRICS.map((m) => (
             <AugPanel key={m.label} className="px-5 py-4">
-              <div className="font-mono text-[10px] tracking-[0.3em] text-[#00ff9c]/50">
+              <div className="font-mono text-[10px] tracking-[0.3em] text-[#3b82f6]/50">
                 {m.label}
               </div>
-              <div className="mt-1 text-2xl font-bold text-[#00ff9c] [text-shadow:0_0_12px_rgba(0,255,156,0.4)]">
+              <div className="mt-1 text-2xl font-bold text-[#3b82f6] [text-shadow:0_0_12px_rgba(59,130,246,0.4)]">
                 {m.value}
               </div>
-              <div className="mt-1 text-xs text-[#d8ffe9]/60">{m.sub}</div>
+              <div className="mt-1 text-xs text-[#dbe9ff]/60">{m.sub}</div>
             </AugPanel>
           ))}
         </motion.div>
@@ -394,7 +396,7 @@ export default function Main2() {
         >
           <Link
             href="/proposal"
-            className="border border-[#00ff9c] bg-[#00ff9c]/10 px-8 py-3.5 font-mono text-sm font-bold tracking-[0.2em] text-[#00ff9c] shadow-[0_0_20px_rgba(0,255,156,0.3)] transition hover:bg-[#00ff9c]/25"
+            className="border border-[#3b82f6] bg-[#3b82f6]/10 px-8 py-3.5 font-mono text-sm font-bold tracking-[0.2em] text-[#3b82f6] shadow-[0_0_20px_rgba(59,130,246,0.3)] transition hover:bg-[#3b82f6]/25"
             style={{
               clipPath:
                 "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)",
@@ -404,7 +406,7 @@ export default function Main2() {
           </Link>
           <Link
             href="/"
-            className="border border-[#00ff9c]/40 px-8 py-3.5 font-mono text-sm tracking-[0.2em] text-[#00ff9c]/70 transition hover:border-[#00ff9c] hover:text-[#00ff9c]"
+            className="border border-[#3b82f6]/40 px-8 py-3.5 font-mono text-sm tracking-[0.2em] text-[#3b82f6]/70 transition hover:border-[#3b82f6] hover:text-[#3b82f6]"
             style={{
               clipPath:
                 "polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px)",

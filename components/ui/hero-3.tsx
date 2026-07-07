@@ -27,7 +27,7 @@ const ActionButton = ({
     href={href ?? "#"}
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
-    className="mt-8 inline-block rounded-full bg-emerald-500 px-8 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+    className="mt-8 inline-block rounded-full bg-blue-500 px-8 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
   >
     {children}
   </motion.a>
